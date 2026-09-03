@@ -1,0 +1,18 @@
+services:
+  order_service:
+    build: .
+    container_name: order_service
+    expose:
+      - "8002"
+    volumes:
+      - .:/app
+      - /app/.venv
+    env_file:
+      - .env
+    networks:
+      - fastapi_app
+
+networks:
+  fastapi_app:
+    external: true
+    name: fullstack-ai-project_default
