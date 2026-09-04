@@ -10,9 +10,9 @@ services:
     env_file:
       - .env
     networks:
-      - fastapi_app
+      - shoponbot_external_shared_net
 
 networks:
-  fastapi_app:
+  shoponbot_external_shared_net:
     external: true
-    name: fullstack-ai-project_default
+    name: shoponbot-production-network
