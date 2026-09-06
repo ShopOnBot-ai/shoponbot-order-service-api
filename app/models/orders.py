@@ -1,14 +1,19 @@
+import enum
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import JSON, DateTime, Enum, Numeric, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
 from app.schemas.order import OrderStatus, PaymentStatus
 
+if TYPE_CHECKING:
+    from app.models.order_item import OrderItem
 
-class CancelledBy(str, Enum):
+
+class CancelledBy(str, enum.Enum):
     USER = "user"
     ADMIN = "admin"
     SYSTEM = "system"
@@ -85,4 +90,8 @@ class Order(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+    items: Mapped[list["OrderItem"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan"
     )
