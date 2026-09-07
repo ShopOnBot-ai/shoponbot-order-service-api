@@ -12,6 +12,7 @@ class Address(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
     phone: Mapped[str] = mapped_column(String(15), nullable=False)
     address_line1: Mapped[str] = mapped_column(String(250), nullable=False)
     address_line2: Mapped[str | None] = mapped_column(String(250), nullable=True)
