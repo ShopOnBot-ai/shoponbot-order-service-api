@@ -1,12 +1,10 @@
-import logging
 from typing import Annotated
 
 import httpx
 from fastapi import Depends, HTTPException, Request, status
 
-logger = logging.getLogger("uvicorn.error")
-
 from app.core.config import settings
+from app.core.logging import logger
 
 
 async def get_current_user_id(request: Request) -> int:
