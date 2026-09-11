@@ -34,4 +34,4 @@ async def get_current_user_id(request: Request) -> int:
             )
 
 
-CurrentUser = Annotated[str, Depends(get_current_user_id)]
+CurrentUserId = Annotated[str, Depends(get_current_user_id)]

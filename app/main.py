@@ -12,8 +12,3 @@ app.include_router(api_router, prefix="")
 @app.get("/health", include_in_schema=False)
 def health_check():
     return {"status": "Order service is healthy"}
-
-
-@app.get("/")
-def get_orders():
-    return {"message": "Orders"}

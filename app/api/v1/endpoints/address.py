@@ -6,8 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.models.address import Address
-from app.schemas.address import AddressRequest, AddressResponse, AddressesResponse
-from app.utils.helper import CurrentUser, logger
+from app.schemas.address import (
+    AddressDeleteResponse,
+    AddressesResponse,
+    AddressRequest,
+    AddressResponse,
+    AddressUpdate,
+    AddressUpdateResponse,
+)
+from app.utils.helper import CurrentUserId, logger
 
 router = APIRouter()
 
@@ -15,22 +22,26 @@ router = APIRouter()
 @router.post("/", response_model=AddressResponse)
 async def create_addresses(
     payload: AddressRequest,
-    user_id: CurrentUser,
+    user_id: CurrentUserId,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        result = await db.execute(select(Address).where(Address.user_id == user_id, Address.address_line1 == payload.address_line1))
+        result = await db.execute(
+            select(Address).where(
+                Address.user_id == user_id,
+                Address.address_line1 == payload.address_line1,
+            )
+        )
         address = result.scalar_one_or_none()
         logger.info("address: %s", address)
 
         if address is not None:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Address already exist"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Address already exist"
             )
 
         new_address = Address(
-            user_id= user_id,
+            user_id=user_id,
             name=payload.name,
             phone=payload.phone,
             address_line1=payload.address_line1,
@@ -40,7 +51,7 @@ async def create_addresses(
             postal_code=payload.postal_code,
             country=payload.country,
             latitude=payload.latitude,
-            longitude=payload.longitude
+            longitude=payload.longitude,
         )
 
         db.add(new_address)
@@ -63,9 +74,10 @@ async def create_addresses(
         )
 
 
-
 @router.get("/", response_model=AddressesResponse)
-async def get_all_addresses(user_id: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_all_addresses(
+    user_id: CurrentUserId, db: Annotated[AsyncSession, Depends(get_db)]
+):
     try:
         results = await db.execute(select(Address).where(Address.user_id == user_id))
         addresses = results.scalars().all()
@@ -74,18 +86,100 @@ async def get_all_addresses(user_id: CurrentUser, db: Annotated[AsyncSession, De
         if addresses is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No Addresses found for this user, please create atleast one address first"
+                detail="No Addresses found for this user, please create atleast one address first",
             )
 
         response = AddressesResponse(
             message="Addresses fetched successfully",
             user_id=user_id,
-            addresses=addresses
+            addresses=addresses,
         )
         return response
     except Exception as e:
         logger.exception("Failed to fetch addresses: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch addresses"
+            detail="Failed to fetch addresses",
+        )
+
+
+@router.patch("/{address_id}", response_model=AddressUpdateResponse)
+async def update_address(
+    address_id: int,
+    payload: AddressUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user_id: CurrentUserId,
+):
+    try:
+        result = await db.execute(
+            select(Address).where(Address.id == address_id, Address.user_id == user_id)
+        )
+        address = result.scalar_one_or_none()
+        logger.info("address: %s", address)
+
+        if address is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No such address found for this address id"
+            )
+
+        address.name = payload.name
+        address.phone = payload.phone
+        address.address_line1 = payload.address_line1
+        address.address_line2 = payload.address_line2
+        address.city = payload.city
+        address.state = payload.state
+        address.postal_code = payload.postal_code
+        address.country = payload.country
+        address.latitude = payload.latitude
+        address.longitude = payload.longitude
+
+        await db.flush()
+        await db.refresh(address)
+
+        return AddressUpdateResponse(
+            message="Address updated successfully",
+            address_id=address.id
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to update address: %s", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update address",
+        )
+
+
+@router.delete("/{address_id}", response_model=AddressDeleteResponse)
+async def delete_address(
+    address_id: int,
+    user_id: CurrentUserId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        result = await db.execute(
+            select(Address).where(Address.user_id == user_id, Address.id == address_id)
+        )
+        address = result.scalar_one_or_none()
+        logger.info("address: %s", address)
+
+        if address is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No such address found for this address id"
+            )
+
+        await db.delete(address)
+        return AddressDeleteResponse(
+            message="Address removed successfully",
+            address_id=address.id
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to remove address: %s", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to remove address",
         )

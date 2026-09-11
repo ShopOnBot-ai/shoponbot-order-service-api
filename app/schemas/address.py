@@ -52,3 +52,32 @@ class AddressesResponse(BaseModel):
     message: str
     user_id: int
     addresses: list[AddressDBResponse]
+
+
+class AddressUpdate(AddressBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str | None = None
+    phone: str | None = None
+    address_line1: str | None = None
+    address_line2: str | None = None
+    city: str | None = None
+    state: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
+
+
+class AddressUpdateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    message: str
+    address_id: int
+
+
+class AddressDeleteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    message: str
+    address_id: int
