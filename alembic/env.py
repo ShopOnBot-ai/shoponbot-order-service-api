@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import settings
 from app.db.database import Base
-from app.models.address import Address
 from app.models.order_item import OrderItem
 from app.models.orders import Order
 
@@ -38,7 +37,7 @@ target_metadata = Base.metadata
 
 
 def include_object(object, name, type_, reflected, compare_to):
-    ignored_tables = ["users", "products", "carts", "cart_items", "alembic_version"]
+    ignored_tables = ["users", "products", "carts", "cart_items", "alembic_version", "addresses"]
     
     if type_ == "table" and name in ignored_tables:
         return False
