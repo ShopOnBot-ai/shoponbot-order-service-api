@@ -28,9 +28,9 @@ async def get_user_cart(cookies: dict) -> dict:
                     detail="Unauthorized or Session Expired",
                 )
 
-            cart = response.json()
-            logger.info("cart: %s", cart)
-            return cart
+            cart_data = response.json()
+            logger.info("cart: %s", cart_data)
+            return cart_data
         except Exception as e:
             logger.exception("Failed to connect to the service: %s", str(e))
             raise HTTPException(

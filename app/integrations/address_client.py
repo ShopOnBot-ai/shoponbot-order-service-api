@@ -22,9 +22,9 @@ async def get_user_address(address_id: int, cookies: dict) -> dict:
                     detail="Unauthorized or Session Expired",
                 )
 
-            address = response.json()
-            logger.info("address: %s", address)
-            return address
+            address_data = response.json()
+            logger.info("address: %s", address_data)
+            return address_data
         except Exception as e:
             logger.exception("Failed to connect to the service: %s", str(e))
             raise HTTPException(
