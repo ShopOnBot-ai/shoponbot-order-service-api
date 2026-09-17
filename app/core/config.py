@@ -12,5 +12,8 @@ class Settings(BaseSettings):
     # api_url
     backend_api_url: str
 
+    # redis_url
+    redis_url: str
+
 
 settings = Settings()

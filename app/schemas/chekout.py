@@ -17,6 +17,7 @@ class CheckoutSummaryResponse(BaseModel):
     shipping_fee: Decimal
     discount: Decimal
     total_amount: Decimal
+    idempotency_key: str
 
 
 class CheckoutRequest(BaseModel):
