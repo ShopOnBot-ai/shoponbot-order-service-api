@@ -9,16 +9,3 @@ from app.schemas.chekout import CheckoutRequest, CheckoutResponse
 
 router = APIRouter()
 
-
-@router.post("/", response_model=CheckoutResponse)
-async def create_order(
-    payload: CheckoutRequest,
-    user_id: CurrentUserId,
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    try:
-        pass
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise

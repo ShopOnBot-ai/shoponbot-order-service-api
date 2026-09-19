@@ -2,6 +2,7 @@ import redis.asyncio as redis
 from fastapi import HTTPException, status
 
 from app.core.config import settings
+from app.core.logging import logger
 
 redis_client = redis.from_url(
     str(settings.redis_url),
@@ -11,7 +12,9 @@ redis_client = redis.from_url(
 
 async def verify_and_lock_request(client, key: str, user_id: int):
     redis_key = f"idempotency:{user_id}:{key}"
+    logger.info("redis key: %s", redis_key)
     cached_status = await client.get(redis_key)
+    logger.info("cached status: %s", cached_status)
 
     if cached_status is not None:
         if cached_status == "PROCESSING":

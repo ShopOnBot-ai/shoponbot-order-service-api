@@ -2,6 +2,8 @@ import secrets
 import string
 from datetime import datetime
 
+from app.core.logging import logger
+
 
 def generate_order_number(user_id: int) -> str:
     """
@@ -13,5 +15,6 @@ def generate_order_number(user_id: int) -> str:
     allowed_chars = string.ascii_uppercase + string.digits
     random_str = "".join(secrets.choice(allowed_chars) for _ in range(5))
     order_number = f"SOB-{date_str}-{user_id}-{random_str}"
+    logger.info("order number: %s", order_number)
     
     return order_number

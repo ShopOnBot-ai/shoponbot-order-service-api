@@ -39,4 +39,5 @@ class CheckoutService:
             "shipping_fee": shipping_fee,
             "discount": discount,
             "total_amount": total_amount,
+            "items": items
         }
