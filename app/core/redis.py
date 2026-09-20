@@ -28,3 +28,8 @@ async def verify_and_lock_request(client, key: str, user_id: int):
                 detail=f"Duplicate request: Order already placed with ID {cached_status}"
             )
     await redis_client.set(redis_key, "PROCESSING", ex=300)
+
+
+def generate_order_cache_key(user_id: int, limit: int, cursor: str | None = None) -> str:
+    cached_key = f"orders:user:{user_id}:cursor:{cursor or 'none'}:limit:{limit}"
+    return cached_key

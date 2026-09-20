@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class OrderStatus(str, Enum):
@@ -56,3 +56,15 @@ class OrderResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+
+class PaginatedOrderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    orders: list[OrderResponse]
+    next_cursor: str | None = None
+    has_more: bool = False
+
+
+class OrderCancelRequest(BaseModel):
+    cancellation_reason: str = Field(min_length=5, max_length=100)

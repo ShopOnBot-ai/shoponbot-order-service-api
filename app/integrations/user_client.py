@@ -9,7 +9,6 @@ from app.core.logging import logger
 
 async def get_current_user_id(request: Request) -> int:
     cookies = request.cookies
-    logger.info("cookies: %s", cookies)
 
     async with httpx.AsyncClient() as client:
         try:
