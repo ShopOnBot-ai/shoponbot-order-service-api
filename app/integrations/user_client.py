@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.core.logging import logger
 
 
-async def get_current_user_id(request: Request) -> int:
+async def get_current_user(request: Request) -> dict:
     cookies = request.cookies
 
     async with httpx.AsyncClient() as client:
@@ -22,7 +22,10 @@ async def get_current_user_id(request: Request) -> int:
 
             user_data = response.json()
             logger.info("user_data: %s", user_data)
-            return int(user_data.get("id"))
+            return {
+                "user_id": int(user_data.get("id")),
+                "role": user_data.get("role")
+            }
 
         except httpx.RequestError:
             raise HTTPException(
@@ -31,4 +34,4 @@ async def get_current_user_id(request: Request) -> int:
             )
 
 
-CurrentUserId = Annotated[str, Depends(get_current_user_id)]
+CurrentUser = Annotated[dict, Depends(get_current_user)]

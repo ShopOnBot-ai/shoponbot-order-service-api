@@ -10,7 +10,7 @@ from app.core.logging import logger
 from app.core.redis import generate_order_cache_key, redis_client
 from app.db.base import EventOutbox, Order
 from app.db.database import get_db
-from app.integrations.user_client import CurrentUserId
+from app.integrations.user_client import CurrentUser
 from app.models.event_outbox import EventStatus
 from app.models.orders import CancelledBy
 from app.schemas.order import (
@@ -27,11 +27,13 @@ router = APIRouter()
 @router.get("/", response_model=PaginatedOrderResponse, status_code=status.HTTP_200_OK)
 async def get_user_orders(
     db: Annotated[AsyncSession, Depends(get_db)],
-    user_id: CurrentUserId,
+    current_user: CurrentUser,
     limit=10,
     cursor: str | None = None,
 ):
     try:
+        user_id = current_user.get("user_id")
+
         cursor_id = decode_cursor(cursor)
         logger.info("Decode cursor value: %s", cursor_id)
         cached_key = generate_order_cache_key(
@@ -55,6 +57,7 @@ async def get_user_orders(
         )
         if cursor_id is not None:
             query = query.where(Order.id < cursor_id)
+            
         query = query.order_by(Order.id.desc()).limit(int(limit) + 1)
         result = await db.execute(query)
         orders = list(result.scalars().all())
@@ -82,9 +85,11 @@ async def get_user_orders(
 
 @router.patch("/{order_id}/cancel", response_model=OrderResponse)
 async def cancel_order_by_user(
-    db: Annotated[AsyncSession, Depends(get_db)], payload: OrderCancelRequest, order_id: int, user_id: CurrentUserId
+    db: Annotated[AsyncSession, Depends(get_db)], payload: OrderCancelRequest, order_id: int, current_user: CurrentUser
 ):
     try:
+        user_id = current_user.get("user_id")
+
         query = (
             select(Order)
             .where(Order.id == order_id, Order.user_id == user_id)

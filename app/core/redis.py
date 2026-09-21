@@ -33,3 +33,7 @@ async def verify_and_lock_request(client, key: str, user_id: int):
 def generate_order_cache_key(user_id: int, limit: int, cursor: str | None = None) -> str:
     cached_key = f"orders:user:{user_id}:cursor:{cursor or 'none'}:limit:{limit}"
     return cached_key
+
+def generate_admin_orders_cache_key(limit: int, page: int, search: str | None = None) -> str:
+    cached_key = f"orders:admin:page:{page}:limit:{limit}:search:{search}"
+    return cached_key

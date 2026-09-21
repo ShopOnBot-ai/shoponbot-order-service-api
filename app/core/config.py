@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8"
+        env_file_encoding="utf-8",
     )
     # db_url
     database_url: str
@@ -14,6 +14,9 @@ class Settings(BaseSettings):
 
     # redis_url
     redis_url: str
+
+    # frontend_url
+    frontend_url: str
 
 
 settings = Settings()

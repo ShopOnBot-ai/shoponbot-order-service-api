@@ -5,13 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import logger
 from app.core.redis import redis_client, verify_and_lock_request
-from app.db.base import Order, OrderItem, EventOutbox
+from app.db.base import EventOutbox, Order, OrderItem
 from app.db.database import get_db
 from app.integrations.address_client import get_user_address
 from app.integrations.cart_client import get_user_cart
-from app.integrations.user_client import CurrentUserId
-from app.models.orders import OrderStatus, PaymentStatus
+from app.integrations.user_client import CurrentUser
 from app.models.event_outbox import EventStatus
+from app.models.orders import OrderStatus, PaymentStatus
 from app.schemas.chekout import (
     CheckoutRequest,
     CheckoutResponse,
@@ -60,10 +60,11 @@ async def checkout_summary(
 async def create_order(
     payload: CheckoutRequest,
     request: Request,
-    user_id: CurrentUserId,
+    current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
+        user_id = current_user.get("user_id")
         await verify_and_lock_request(
             client=redis_client, key=payload.idempotency_key, user_id=user_id
         )
