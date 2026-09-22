@@ -18,5 +18,8 @@ class Settings(BaseSettings):
     # frontend_url
     frontend_url: str
 
+    # kafka_bootstrap_server
+    kafka_bootstrap_servers: str
+
 
 settings = Settings()
