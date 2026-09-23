@@ -7,10 +7,11 @@ from sqlalchemy import JSON, DateTime, Enum, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
-from app.schemas.order import OrderStatus, PaymentStatus
+from app.schemas.order import OrderStatus
 
 if TYPE_CHECKING:
     from app.models.order_item import OrderItem
+    from app.models.payments import Payment
 
 
 class CancelledBy(str, enum.Enum):
@@ -29,9 +30,6 @@ class Order(Base):
     )
     status: Mapped[OrderStatus] = mapped_column(
         Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False
-    )
-    payment_status: Mapped[PaymentStatus] = mapped_column(
-        Enum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False
     )
     subtotal: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
@@ -56,12 +54,6 @@ class Order(Base):
     total_amount: Mapped[Decimal | None] = mapped_column(
         Numeric(12, 2),
         nullable=True,
-    )
-
-    currency: Mapped[str] = mapped_column(
-        String(3),
-        nullable=False,
-        default="INR",
     )
 
     shipping_address: Mapped[dict] = mapped_column(
@@ -93,5 +85,8 @@ class Order(Base):
     )
 
     items: Mapped[list["OrderItem"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan"
+    )
+    payment: Mapped["Payment"] = relationship(
         back_populates="order", cascade="all, delete-orphan"
     )

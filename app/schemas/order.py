@@ -4,6 +4,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.payment import PaymentResponse
+
 
 class OrderStatus(str, Enum):
     PENDING = "pending"
@@ -13,13 +15,6 @@ class OrderStatus(str, Enum):
     CANCELLED = "cancelled"
     PAYMENT_PENDING = "payment-pending"
     PAYMENT_FAILED = "payment-failed"
-
-
-class PaymentStatus(str, Enum):
-    PENDING = "pending"
-    SUCCESS = "success"
-    FAILED = "failed"
-    REFUNDED = "refunded"
 
 
 class OrderItemResponse(BaseModel):
@@ -41,18 +36,17 @@ class OrderResponse(BaseModel):
     order_number: str
 
     status: OrderStatus
-    payment_status: PaymentStatus
 
     subtotal: Decimal
     tax: Decimal | None = None
     shipping_fee: Decimal | None = None
     discount: Decimal | None = None
     total_amount: Decimal
-    currency: str
 
     shipping_address: dict
 
     items: list[OrderItemResponse]
+    payment: PaymentResponse | None = None
 
     created_at: datetime
     updated_at: datetime

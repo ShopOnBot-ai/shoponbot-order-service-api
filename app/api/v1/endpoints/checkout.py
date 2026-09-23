@@ -1,17 +1,19 @@
 from typing import Annotated
 
+import razorpay
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.logging import logger
 from app.core.redis import redis_client, verify_and_lock_request
-from app.db.base import EventOutbox, Order, OrderItem
+from app.db.base import EventOutbox, Order, OrderItem, Payment
 from app.db.database import get_db
 from app.integrations.address_client import get_user_address
 from app.integrations.cart_client import get_user_cart
 from app.integrations.user_client import CurrentUser
 from app.models.event_outbox import EventStatus
-from app.models.orders import OrderStatus, PaymentStatus
+from app.models.orders import OrderStatus
 from app.schemas.chekout import (
     CheckoutRequest,
     CheckoutResponse,
@@ -23,6 +25,10 @@ from app.utils.helper import generate_order_number
 from app.utils.idempotency import generate_idempotency_key, update_idempotency_state
 
 router = APIRouter()
+
+razorpay_client = razorpay.Client(
+    auth=(settings.razorpay_api_key.get_secret_value(), settings.razorpay_key_secret.get_secret_value())
+)
 
 
 @router.post("/summary", response_model=CheckoutSummaryResponse)
@@ -89,7 +95,6 @@ async def create_order(
             user_id=user_id,
             order_number=order_num,
             status=OrderStatus.PENDING,
-            payment_status=PaymentStatus.PENDING,
             subtotal=bill_summary["subtotal"],
             tax=bill_summary["tax"],
             shipping_fee=bill_summary["shipping_fee"],
@@ -111,6 +116,36 @@ async def create_order(
             )
             db.add(new_item)
         await db.flush()
+
+        try:
+            razorpay_amount_paise = int(new_order.total_amount * 100)
+            razorpay_order_response = razorpay_client.order.create({
+                "amount": razorpay_amount_paise,
+                "currency": "INR",
+                "receipt": f"receipt_order_{new_order.id}",
+                "payment_capture": 1 
+            })
+            rzp_order_id = razorpay_order_response.get("id")
+            logger.info("Successfully generated Razorpay Order ID reference token: %s", rzp_order_id)
+
+        except Exception as razorpay_err:
+            logger.error("External payment gateway communication collapse: %s", str(razorpay_err))
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to initialize secure transaction sessions token from payment provider cluster."
+            )
+
+        new_payment = Payment(
+            order_id=new_order.id,
+            amount=new_order.total_amount,
+            razorpay_order_id=rzp_order_id,
+            payment_status="pending",
+            payment_gateway="razorpay",
+            currency="INR"
+        )
+        db.add(new_payment)
+        await db.flush()
+
 
         new_event = EventOutbox(
             aggregate_type="Order",
@@ -146,7 +181,8 @@ async def create_order(
             message="Order placed successfully",
             order_id=new_order.id,
             order_number=new_order.order_number,
-            payment_status=new_order.payment_status,
+            payment_status="pending",
+            razorpay_order_id=rzp_order_id,
             payment_url=None,
         )
     except HTTPException:

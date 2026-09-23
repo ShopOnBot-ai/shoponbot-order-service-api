@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.order import PaymentStatus
+from app.models.payments import PaymentStatus
 
 
 class CheckoutSummaryRequest(BaseModel):
@@ -33,4 +33,5 @@ class CheckoutResponse(BaseModel):
     order_id: int
     order_number: str
     payment_status: PaymentStatus
+    razorpay_order_id: str
     payment_url: str | None = None

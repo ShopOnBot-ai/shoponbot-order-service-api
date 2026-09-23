@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,11 @@ class Settings(BaseSettings):
 
     # kafka_bootstrap_server
     kafka_bootstrap_servers: str
+
+    # razorpay
+    razorpay_webhook_secret: str
+    razorpay_api_key: SecretStr
+    razorpay_key_secret: SecretStr
 
 
 settings = Settings()

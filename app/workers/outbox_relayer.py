@@ -57,7 +57,6 @@ async def publish_outbox_relayer():
                     "Successfully processed and committed %s outbox events.",
                     len(pending_events),
                 )
-                break
 
         except Exception as e:
             logger.error(
