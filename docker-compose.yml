@@ -15,4 +15,4 @@ services:
 networks:
   shoponbot_external_shared_net:
     external: true
-    name: shoponbot-production-network
+    name: shoponbot-production-network 
