@@ -9,12 +9,12 @@ from app.messaging.producer import kafka_producer_client
 from app.models.event_outbox import EventStatus
 
 
-async def publish_outbox_relayer():
+async def processOutboxEvents():
     """
     Infinite background loop that polls the event_outbox table
-    and relays pending events to Apache Kafka.
+    and process pending events to Apache Kafka.
     """
-    logger.info("Starting Transactional Outbox Relayer Background Worker Daemon... ⚙️")
+    logger.info("Starting Transactional Outbox Processing Background Worker Daemon...")
 
     await asyncio.sleep(2)
 
@@ -33,7 +33,7 @@ async def publish_outbox_relayer():
 
                 if pending_events:
                     logger.info(
-                        "Found %s pending transaction outbox events to relay.",
+                        "Found %s pending transaction outbox events to process.",
                         len(pending_events),
                     )
 
@@ -60,9 +60,10 @@ async def publish_outbox_relayer():
 
         except Exception as e:
             logger.error(
-                "Outbox Relayer processing cycle encountered a failure: %s",
+                "Outbox processing failed: %s",
                 str(e),
                 exc_info=True,
             )
 
         await asyncio.sleep(2)
+

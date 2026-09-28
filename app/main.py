@@ -8,7 +8,7 @@ from app.api.v1.routers import api_router
 from app.core.config import settings
 from app.core.logging import logger
 from app.messaging.producer import kafka_producer_client
-from app.workers.outbox_relayer import publish_outbox_relayer
+from app.workers.outbox_processor import processOutboxEvents
 
 
 @asynccontextmanager
@@ -16,7 +16,7 @@ async def lifespan(_app: FastAPI):
     # Start up
     await kafka_producer_client.start()
     logger.info("Kafka producer client setup completed")
-    relayer_task = asyncio.create_task(publish_outbox_relayer())
+    relayer_task = asyncio.create_task(processOutboxEvents())
     yield
     # shut down
     relayer_task.cancel()
