@@ -13,10 +13,12 @@ redis_client = redis.from_url(
 async def verify_and_lock_request(client, key: str, user_id: int):
     redis_key = f"idempotency:{user_id}:{key}"
     logger.info("redis key: %s", redis_key)
-    cached_status = await client.get(redis_key)
-    logger.info("cached status: %s", cached_status)
+    is_locked = await redis_client.set(redis_key, "PROCESSING", ex=300, nx=True)
+    logger.info("is locked: %s", is_locked)
 
-    if cached_status is not None:
+    if not is_locked:
+        cached_status = await client.get(redis_key)
+        logger.info("cached status: %s", cached_status)
         if cached_status == "PROCESSING":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -27,7 +29,6 @@ async def verify_and_lock_request(client, key: str, user_id: int):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Duplicate request: Order already placed with ID {cached_status}"
             )
-    await redis_client.set(redis_key, "PROCESSING", ex=300)
 
 
 def generate_order_cache_key(user_id: int, limit: int, cursor: str | None = None) -> str:

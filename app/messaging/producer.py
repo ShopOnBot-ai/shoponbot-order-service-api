@@ -19,7 +19,8 @@ class KafkaProducerMangaer:
             )
             self._producer = AIOKafkaProducer(
                 bootstrap_servers=settings.kafka_bootstrap_servers,
-                value_serializer=lambda v: json.dumps(v).encode("utf-8")
+                value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+                enable_idempotence=True
             )
             await self._producer.start()
             logger.info("Apache Kafka Producer client stream securely initialized and active!")
@@ -31,13 +32,14 @@ class KafkaProducerMangaer:
             self._producer = None
             logger.info("Apache Kafka Producer connection terminated safely.")
 
-    async def publish_event(self, topic: str, payload: dict) -> None:
+    async def publish_event(self, topic: str, key: str, payload: dict) -> None:
         """Centralized event dispatcher block configuration parameters inputs string mappings."""
         if not self._producer:
             raise RuntimeError("Kafka Event streaming engine context missing configuration setup initialization hooks.")
         try:
-            await self._producer.send_and_wait(topic, payload)
-            logger.info("Successfully published transaction streaming event metadata payload to Topic: %s", topic)
+            key_bytes = key.encode("utf-8") if key else None
+            await self._producer.send_and_wait(topic=topic, key=key_bytes, value=payload)
+            logger.info("Successfully published transaction streaming event metadata payload to Topic: %s| key=%s | value=%s", topic, key, payload)
         except Exception as e:
             logger.error("Failed to safely dispatch streaming parameters block to Kafka network clusters: %s", str(e))
             raise

@@ -69,8 +69,8 @@ async def create_order(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    user_id = current_user.get("user_id")
     try:
-        user_id = current_user.get("user_id")
         await verify_and_lock_request(
             client=redis_client, key=payload.idempotency_key, user_id=user_id
         )
