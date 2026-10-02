@@ -1,18 +1,17 @@
 import hashlib
 import hmac
 import json
-from typing import Annotated, Dict, Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Header, HTTPException, Request, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.redis import redis_client
 from app.db.base import EventOutbox, Payment
-from app.db.database import AsyncSessionLocal, get_db
+from app.db.database import AsyncSessionLocal
 from app.models.event_outbox import EventStatus
 from app.schemas.order import OrderStatus
 
@@ -21,14 +20,14 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_200_OK)
 async def payment_webhook(
-    reques: Request,
-    payload: Dict[str, Any],
+    request: Request,
+    payload: dict[str, Any],
     x_razorpay_signature: Annotated[
         str | None, Header(convert_underscores=True)
     ] = None,
 ):
     logger.info("x_razorpay_signature: %s", x_razorpay_signature)
-    body = await reques.body()
+    body = await request.body()
     logger.info("webhook body: %s", body)
     body_text = body.decode("utf-8")
     logger.info("webhook body text: %s", body_text)

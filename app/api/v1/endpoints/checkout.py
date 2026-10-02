@@ -62,7 +62,7 @@ async def checkout_summary(
         )
 
 
-@router.post("/", response_model=CheckoutResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/place-order", response_model=CheckoutResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
     payload: CheckoutRequest,
     request: Request,
