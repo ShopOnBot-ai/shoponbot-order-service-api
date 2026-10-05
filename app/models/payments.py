@@ -19,6 +19,7 @@ class PaymentMode(str, enum.Enum):
     ONLINE = "online"
     UPI = "upi"
     CARD = "card"
+    NETBANKING = "netbanking"
 
 
 class Payment(Base):

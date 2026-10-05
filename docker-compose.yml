@@ -2,8 +2,11 @@ services:
   order_service:
     build: .
     container_name: order_service
-    expose:
-      - "8002"
+    ports:
+      - "8002:8002"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - .:/app
       - /app/.venv

@@ -53,7 +53,7 @@ async def get_user_orders(
         query = (
             select(Order)
             .where(Order.user_id == user_id)
-            .options(selectinload(Order.items))
+            .options(selectinload(Order.items), selectinload(Order.payment))
         )
         if cursor_id is not None:
             query = query.where(Order.id < cursor_id)

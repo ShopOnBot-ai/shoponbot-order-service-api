@@ -10,18 +10,18 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.redis import redis_client
-from app.db.base import EventOutbox, Payment
+from app.db.base import EventOutbox, Order, Payment
 from app.db.database import AsyncSessionLocal
 from app.models.event_outbox import EventStatus
+from app.models.payments import PaymentMode
 from app.schemas.order import OrderStatus
 
 router = APIRouter()
 
 
-@router.post("/", status_code=status.HTTP_200_OK)
+@router.post("/webhook", status_code=status.HTTP_200_OK)
 async def payment_webhook(
     request: Request,
-    payload: dict[str, Any],
     x_razorpay_signature: Annotated[
         str | None, Header(convert_underscores=True)
     ] = None,
@@ -45,15 +45,15 @@ async def payment_webhook(
         webhook_secret = settings.razorpay_webhook_secret.encode("utf-8")
         generate_signature = hmac.new(webhook_secret, body, hashlib.sha256).hexdigest()
 
-        # if not hmac.compare_digest(generate_signature, x_razorpay_signature):
-        #     logger.error(
-        #         "Security boundary breached: Webhook signature checks validation mismatch!"
-        #     )
-        #     raise HTTPException(
-        #         status_code=status.HTTP_400_BAD_REQUEST,
-        #         detail="Unauthorized data signature values",
-        #     )
-        pass
+        if not hmac.compare_digest(generate_signature, x_razorpay_signature):
+            logger.error(
+                "Security boundary breached: Webhook signature checks validation mismatch!"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unauthorized data signature values",
+            )
+        print("Bypassing Signature Guards. Parsing raw webhook body text...")
 
         payload = json.loads(body_text)
         logger.info("payload data: %s", payload)
@@ -69,12 +69,19 @@ async def payment_webhook(
                 payment_entity = payload["payload"]["payment"]["entity"]
                 rzp_order_id = payment_entity.get("order_id")
                 transaction_id = payment_entity.get("id")
-                method = payment_entity.get("method", "online")
+                raw_method = payment_entity.get("method")
+                method= raw_method.upper() if raw_method else "ONLINE"
+                logger.info("method: %s", method)
+                if method in PaymentMode.__members__:
+                    final_payment_mode = PaymentMode[method]
+                else:
+                    logger.warning("Unknown payment method received from Razorpay: %s. Falling back to ONLINE.", raw_method)
+                    final_payment_mode = PaymentMode.ONLINE
 
                 query = (
                     select(Payment)
                     .where(Payment.razorpay_order_id == rzp_order_id)
-                    .options(selectinload(Payment.order))
+                    .options(selectinload(Payment.order).selectinload(Order.items),selectinload(Payment.order).selectinload(Order.payment))
                 )
                 result = await session.execute(query)
                 payment = result.scalar_one_or_none()
@@ -88,7 +95,7 @@ async def payment_webhook(
                 else:
                     payment.transaction_id = transaction_id
                     payment.payment_status = "success"
-                    payment.payment_mode = method
+                    payment.payment_mode = final_payment_mode
 
                     if payment.order:
                         payment.order.status = OrderStatus.PROCESSING
