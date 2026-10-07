@@ -17,6 +17,7 @@ from app.schemas.admin.admin_orders import (
     AdminOrdersResponse,
 )
 from app.schemas.order import OrderResponse, OrderStatus
+from app.integrations.address_client import get_user_address
 
 router = APIRouter()
 
@@ -159,6 +160,20 @@ async def ship_order(order_id: int, db: Annotated[AsyncSession, Depends(get_db)]
                 detail="Only accepted processing orders can be pushed to shipment status.",
             )
 
+        user_lat = None
+        user_lng = None
+
+        if hasattr(order, 'address_id') and order.shipping_address.get("id"):
+            try:
+                address_metadata = await get_user_address(order.shipping_address.get("id"))
+                logger.info("address metadata: %s", address_metadata)
+                if address_metadata:
+                    user_lat = address_metadata.get("latitude")
+                    user_lng = address_metadata.get("longitude")
+                    logger.info("Geolocation coordinates securely injected: lat=%s, lng=%s", user_lat, user_lng)
+            except Exception as addr_err:
+                logger.error("Non-blocking error: Failed to pull internal address geo-coordinates: %s", str(addr_err))
+
         order.status = OrderStatus.SHIPPED
 
         new_event = EventOutbox(
@@ -171,6 +186,8 @@ async def ship_order(order_id: int, db: Annotated[AsyncSession, Depends(get_db)]
                 "order_number": order.order_number,
                 "user_id": order.user_id,
                 "status": "shipped",
+                "user_lat": str(user_lat) if user_lat else None,
+                "user_lng": str(user_lng) if user_lng else None
             },
         )
         db.add(new_event)

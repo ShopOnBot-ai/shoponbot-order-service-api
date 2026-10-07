@@ -42,7 +42,7 @@ async def processOutboxEvents():
                         logger.info("target topic: %s", target_topic)
                         await kafka_producer_client.publish_event(
                             topic=target_topic,
-                            key= str(event.payload.get("order_id")),
+                            key= str(event.aggregate_id),
                             payload={
                                 "event_id": event.id,
                                 "event_type": event.event_type,
