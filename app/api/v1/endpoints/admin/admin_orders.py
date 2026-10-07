@@ -10,6 +10,7 @@ from app.core.logging import logger
 from app.core.redis import generate_admin_orders_cache_key, redis_client
 from app.db.base import EventOutbox, Order
 from app.db.database import get_db
+from app.integrations.address_client import get_user_address
 from app.models.event_outbox import EventStatus
 from app.models.orders import CancelledBy
 from app.schemas.admin.admin_orders import (
@@ -17,7 +18,6 @@ from app.schemas.admin.admin_orders import (
     AdminOrdersResponse,
 )
 from app.schemas.order import OrderResponse, OrderStatus
-from app.integrations.address_client import get_user_address
 
 router = APIRouter()
 
@@ -163,7 +163,7 @@ async def ship_order(order_id: int, db: Annotated[AsyncSession, Depends(get_db)]
         user_lat = None
         user_lng = None
 
-        if hasattr(order, 'address_id') and order.shipping_address.get("id"):
+        if order.shipping_address and order.shipping_address.get("id"):
             try:
                 address_metadata = await get_user_address(order.shipping_address.get("id"))
                 logger.info("address metadata: %s", address_metadata)
