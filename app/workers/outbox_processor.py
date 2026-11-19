@@ -1,4 +1,5 @@
 import asyncio
+import signal
 
 from sqlalchemy import select
 
@@ -9,7 +10,7 @@ from app.messaging.producer import kafka_producer_client
 from app.models.event_outbox import EventStatus
 
 
-async def processOutboxEvents():
+async def processOutboxEvents(stop_event: asyncio.Event):
     """
     Infinite background loop that polls the event_outbox table
     and process pending events to Apache Kafka.
@@ -18,7 +19,7 @@ async def processOutboxEvents():
 
     await asyncio.sleep(2)
 
-    while True:
+    while not stop_event.is_set():
         try:
             async with AsyncSessionLocal() as db, db.begin():
                 db.expire_all()
@@ -27,6 +28,7 @@ async def processOutboxEvents():
                     .where(EventOutbox.publish_status == EventStatus.PENDING)
                     .order_by(EventOutbox.created_at.asc())
                     .limit(10)
+                    .with_for_update(skip_locked=True)
                 )
                 results = await db.execute(query)
                 pending_events = results.scalars().all()
@@ -66,5 +68,29 @@ async def processOutboxEvents():
                 exc_info=True,
             )
 
-        await asyncio.sleep(2)
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=2.0)
+        except asyncio.TimeoutError:
+            pass
+
+
+
+async def main():
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, stop_event.set)
+
+    await kafka_producer_client.start()
+    logger.info("Kafka producer client setup completed in standalone worker")
+    try:
+        await processOutboxEvents(stop_event)
+    finally:
+        logger.info("Shutting down Kafka producer gracefully...")
+        await kafka_producer_client.stop()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
 

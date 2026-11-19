@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated
 
 import razorpay
@@ -74,8 +75,23 @@ async def create_order(
         await verify_and_lock_request(
             client=redis_client, key=payload.idempotency_key, user_id=user_id
         )
-        address_data = await get_user_address(payload.address_id, request.cookies)
-        logger.info("address data from post checkout: %s", address_data)
+        try:
+            address_data, cart_data = await asyncio.wait_for(
+                asyncio.gather(
+                    get_user_address(payload.address_id, request.cookies),
+                    get_user_cart(request.cookies)
+                ),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            logger.error("Timed out fetching address/cart for user %s", user_id)
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="Upstream service timed out. Please try again.",
+            )
+
+        logger.debug("address data from post checkout: %s", address_data)
+        logger.debug("cart data from post checkout: %s", cart_data)
 
         if not address_data or not address_data.get("addresses"):
             raise HTTPException(
@@ -84,9 +100,6 @@ async def create_order(
             )
         target_shipping_address = address_data.get("addresses")[0]
         logger.info("target shiiping address: %s", target_shipping_address)
-
-        cart_data = await get_user_cart(request.cookies)
-        logger.info("cart data from post checkout: %s", cart_data)
         
         bill_summary = CheckoutService.calculate_bill(cart_data, address_data)
         order_num = generate_order_number(user_id)
@@ -119,12 +132,18 @@ async def create_order(
 
         try:
             razorpay_amount_paise = int(new_order.total_amount * 100)
-            razorpay_order_response = razorpay_client.order.create({
-                "amount": razorpay_amount_paise,
-                "currency": "INR",
-                "receipt": f"receipt_order_{new_order.id}",
-                "payment_capture": 1 
-            })
+            razorpay_order_response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    razorpay_client.order.create,
+                    {
+                        "amount": razorpay_amount_paise,
+                        "currency": "INR",
+                        "receipt": f"receipt_order_{new_order.id}",
+                        "payment_capture": 1,
+                    },
+                ),
+                timeout=15.0
+            )
             rzp_order_id = razorpay_order_response.get("id")
             logger.info("Successfully generated Razorpay Order ID reference token: %s", rzp_order_id)
 

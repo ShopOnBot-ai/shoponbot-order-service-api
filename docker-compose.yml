@@ -15,6 +15,24 @@ services:
     networks:
       - shoponbot_external_shared_net
 
+  outbox_relayer:
+    build: .
+    container_name: outbox_relayer_worker
+    command: >
+      python -m app.workers.outbox_processor
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - .:/app
+      - /app/.venv
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - shoponbot_external_shared_net
+
+
 networks:
   shoponbot_external_shared_net:
     external: true

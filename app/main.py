@@ -8,6 +8,7 @@ from app.api.v1.routers import api_router
 from app.core.config import settings
 from app.core.logging import logger
 from app.messaging.producer import kafka_producer_client
+from app.utils.telemetry import setup_telemetry
 from app.workers.outbox_processor import processOutboxEvents
 
 
@@ -16,10 +17,8 @@ async def lifespan(_app: FastAPI):
     # Start up
     await kafka_producer_client.start()
     logger.info("Kafka producer client setup completed")
-    relayer_task = asyncio.create_task(processOutboxEvents())
     yield
     # shut down
-    relayer_task.cancel()
     await kafka_producer_client.stop()
 
 app = FastAPI(
@@ -27,6 +26,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+setup_telemetry(service_name="order-service", app=app)
 
 @app.middleware("http")
 async def dynamic_root_path_middleware(request: Request, call_next):
@@ -51,3 +52,9 @@ app.add_middleware(
 @app.get("/health", include_in_schema=False)
 def health_check():
     return {"status": "Order service is healthy"}
+
+
+@app.get("/boom", include_in_schema=False)
+async def boom():
+    logger.error("order-service about to fail")
+    raise RuntimeError("test crash in order-service")

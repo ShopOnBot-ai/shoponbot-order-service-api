@@ -9,7 +9,7 @@ async def get_user_cart(cookies: dict) -> dict:
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                f"{settings.backend_api_url}/api/v1/cart/",
+                f"{settings.backend_api_url}/api/v1/cart",
                 cookies=cookies,
                 follow_redirects=True,
                 timeout=5.0,
